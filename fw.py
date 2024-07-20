@@ -2,7 +2,7 @@ import hashlib
 from prettytable import PrettyTable
 
 
-filename = 'users.sql'
+filename = 'test.txt' # write here a filename
 output_data = PrettyTable()
 
 with open(filename) as file:
