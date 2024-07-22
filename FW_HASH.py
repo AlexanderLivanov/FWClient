@@ -8,18 +8,17 @@ output_data = PrettyTable()
 current_dir = "."
 
 
-def enumerateFilesInDirectory(dir):
-	global _HASHIGNORE
+def enumerateFilesInDirectory(dir, ign_file):
 	files_list = []
-	dirs = [x[0] for x in os.walk(dir)]
-	for dir in dirs:
-		if dir in _HASHIGNORE:
-			pass
+
 	for root, dirs, files in os.walk(dir):
+		dirs[:] = [d for d in dirs if d not in ign_file]
+		files = [f for f in files if f not in ign_file]
+		#files_list.append((root, dirs, files))
 		for file in files:
-			file_path = os.path.join(root, file)
-			files_list.append(file_path)
-	print(files_list)
+			path = os.path.relpath(os.path.join(root, file), start=dir)
+			if not any(item in path for item in ign_file):
+				files_list.append(path)
 	return files_list
 
 
@@ -33,7 +32,7 @@ def readFileContent(file):
 
 def calculateHashes(file, content):
 	#i = 0
-	hashed_string = hashlib.sha256(bytes(file, encoding='utf=8')).hexdigest() # first hash should be file`s header
+	hashed_string = hashlib.sha256(bytes(file, encoding='utf-8')).hexdigest() # first hash should be file`s header
 	for string in content:
 		b_string = bytes(string, encoding='utf-8')
 		hashed_string = hashlib.sha256(b_string+bytes(hashed_string, encoding='utf-8')).hexdigest()
@@ -42,25 +41,18 @@ def calculateHashes(file, content):
 	return hashed_string
 
 
-def printFilesInDirectory(directory, dirDeep):
-	global _HASHIGNORE
-	files_list = enumerateFilesInDirectory(directory)
-	for item in files_list:
-		print(item)
-		if os.path.isdir(item):
-			printFilesInDirectory(item, dirDeep)
-			dirDeep += 1
-			print(item)
-		else:
-			currentFileContent = readFileContent(item)
-			calculated_hash = calculateHashes(item, currentFileContent)
-			output_data.add_row([item, "calculated_hash"])
+def printFilesInDirectory(directory):
+	files_list = enumerateFilesInDirectory(directory, _HASHIGNORE)
+	for file in files_list:
+		print(file)
+		currentFileContent = readFileContent(file)
+		calculated_hash = calculateHashes(file, currentFileContent)
+		output_data.add_row([file, "calculated_hash"])
 
 
 _HASHIGNORE = readFileContent(".HASHIGNORE")
-print(".HASHIGNORE FILE:", *_HASHIGNORE)
 
-printFilesInDirectory(current_dir, 0)
+printFilesInDirectory(current_dir)
 
 output_data.title = f"LIST OF CALCULATED CHECKSUMS ({datetime.datetime.now()})"
 output_data.field_names = ["FILE", "CHECKSUM (SHA-256)"]
